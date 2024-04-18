@@ -1,16 +1,14 @@
-import { BigDecimal, BigInt, ethereum } from '@graphprotocol/graph-ts'
-
-import { Transaction } from '../types/schema'
-import { ONE_BD, ZERO_BD, ZERO_BI } from '../utils/constants'
+/* eslint-disable prefer-const */
+import { BigInt, BigDecimal, ethereum } from '@graphprotocol/graph-ts'
+import { Transaction } from '../../generated/schema'
+import { ONE_BI, ZERO_BI, ZERO_BD, ONE_BD } from '../utils/constants'
 
 export function exponentToBigDecimal(decimals: BigInt): BigDecimal {
-  let resultString = '1'
-
-  for (let i = 0; i < decimals.toI32(); i++) {
-    resultString += '0'
+  let bd = BigDecimal.fromString('1')
+  for (let i = ZERO_BI; i.lt(decimals as BigInt); i = i.plus(ONE_BI)) {
+    bd = bd.times(BigDecimal.fromString('10'))
   }
-
-  return BigDecimal.fromString(resultString)
+  return bd
 }
 
 // return 0 if denominator is 0 in division
@@ -22,35 +20,21 @@ export function safeDiv(amount0: BigDecimal, amount1: BigDecimal): BigDecimal {
   }
 }
 
-/**
- * Implements exponentiation by squaring
- * (see https://en.wikipedia.org/wiki/Exponentiation_by_squaring )
- * to minimize the number of BigDecimal operations and their impact on performance.
- */
-export function fastExponentiation(value: BigDecimal, power: i32): BigDecimal {
-  if (power < 0) {
-    const result = fastExponentiation(value, -power)
-    return safeDiv(ONE_BD, result)
-  }
-
-  if (power == 0) {
+export function bigDecimalExponated(value: BigDecimal, power: BigInt): BigDecimal {
+  if (power.equals(ZERO_BI)) {
     return ONE_BD
   }
-
-  if (power == 1) {
-    return value
-  }
-
-  const halfPower = power / 2
-  const halfResult = fastExponentiation(value, halfPower)
-
-  // Use the fact that x ^ (2n) = (x ^ n) * (x ^ n) and we can compute (x ^ n) only once.
-  let result = halfResult.times(halfResult)
-
-  // For odd powers, x ^ (2n + 1) = (x ^ 2n) * x
-  if (power % 2 == 1) {
+  let negativePower = power.lt(ZERO_BI)
+  let result = ZERO_BD.plus(value)
+  let powerAbs = power.abs()
+  for (let i = ONE_BI; i.lt(powerAbs); i = i.plus(ONE_BI)) {
     result = result.times(value)
   }
+
+  if (negativePower) {
+    result = safeDiv(ONE_BD, result)
+  }
+
   return result
 }
 

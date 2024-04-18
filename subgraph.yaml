@@ -1,22 +1,18 @@
 specVersion: 0.0.4
-description: Uniswap is a decentralized protocol for automated token exchange on Ethereum.
+description: Lif3 is a decentralized protocol for automated token exchange on Base.
 repository: https://github.com/Uniswap/uniswap-v3-subgraph
 schema:
   file: ./schema.graphql
 features:
   - nonFatalErrors
-  - grafting
-graft:
-  base: QmZMY9okvPQKzWUqKF8RiRYwqph7Pc4aQZLPhfGvm9xSf4
-  block: 13662965
 dataSources:
   - kind: ethereum/contract
     name: Factory
-    network: mainnet
+    network: base
     source:
-      address: '0x1F98431c8aD98523631AE4a59f267346ea31F984'
+      address: '0x40FE2F4EeaD3d472E5c064b8e970e5a595A44558'
       abi: Factory
-      startBlock: 12369621
+      startBlock: 13121166
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -39,10 +35,43 @@ dataSources:
       eventHandlers:
         - event: PoolCreated(indexed address,indexed address,indexed uint24,int24,address)
           handler: handlePoolCreated
+  - kind: ethereum/contract
+    name: NonfungiblePositionManager
+    network: base
+    source:
+      address: '0xeD1E77786A491c3AC252E918E68E0b3B07721de8'
+      abi: NonfungiblePositionManager
+      startBlock: 13121166
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      file: ./src/mappings/position-manager.ts
+      entities:
+        - Pool
+        - Token
+      abis:
+        - name: NonfungiblePositionManager
+          file: ./abis/NonfungiblePositionManager.json
+        - name: Pool
+          file: ./abis/pool.json
+        - name: Factory
+          file: ./abis/factory.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: IncreaseLiquidity(indexed uint256,uint128,uint256,uint256)
+          handler: handleIncreaseLiquidity
+        - event: DecreaseLiquidity(indexed uint256,uint128,uint256,uint256)
+          handler: handleDecreaseLiquidity
+        - event: Collect(indexed uint256,address,uint256,uint256)
+          handler: handleCollect
+        - event: Transfer(indexed address,indexed address,indexed uint256)
+          handler: handleTransfer
 templates:
   - kind: ethereum/contract
     name: Pool
-    network: mainnet
+    network: base
     source:
       abi: Pool
     mapping:
@@ -69,3 +98,5 @@ templates:
           handler: handleMint
         - event: Burn(indexed address,indexed int24,indexed int24,uint128,uint256,uint256)
           handler: handleBurn
+        - event: Flash(indexed address,indexed address,uint256,uint256,uint256,uint256)
+          handler: handleFlash
